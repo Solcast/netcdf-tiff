@@ -1,8 +1,8 @@
 import argparse
 import sys
 
-from conversion_options import ConversionOptions
-from goes16_converter import Goes16Converter
+from src.conversion_options import ConversionOptions
+from src.goes16_converter import Goes16Converter
 
 
 def parse_arguments():

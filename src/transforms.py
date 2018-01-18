@@ -1,5 +1,5 @@
 import numpy as np
-import util.type_helper as th
+import src.util.type_helper as th
 
 
 class GoesTransform:

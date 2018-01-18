@@ -1,6 +1,6 @@
 import netCDF4
 import os
-import util.type_helper as th
+import src.util.type_helper as th
 
 
 class NetCDFReader:

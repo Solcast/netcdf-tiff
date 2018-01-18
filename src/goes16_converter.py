@@ -1,18 +1,18 @@
 import numpy as np
 from osgeo import gdal, osr, gdal_array
 
-from converters import Converters
-from geotiff_options import GeoTIFF_Options
-from metadata.goes16_file_metadata import Goes16FileMetadata
-from netcdf_reader import NetCDFReader
-from transforms import GoesResolution
+from src.converters import Converters
+from src.geotiff_options import GeoTIFF_Options
+from src.metadata.goes16_file_metadata import Goes16FileMetadata
+from src.netcdf_reader import NetCDFReader
+from src.transforms import GoesResolution
 
 
 class Goes16Converter(Converters):
 
-    def _extract_projection(self, options, extract_key):
+    def _extract_projection(self, options, variable_name):
         netcdf_file = NetCDFReader(netcdf_file=options.input_file, debug=self.debug, verbose=self.verbose)
-        attribs = netcdf_file.variable_projection(extract_key)
+        attribs = netcdf_file.variable_projection(variable_name)
 
         projection = osr.SpatialReference()
 
