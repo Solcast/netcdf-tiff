@@ -1,10 +1,12 @@
 import os
+import util.type_helper as th
+
 
 class ConversionOptions:
 
-
     def __str__(self):
-        return "Input: {0}\nOutput: {1}\nVerbose: {2}\nDebug: {3}".format(self.input_file, self.output_file, self.verbose, self.debug)
+        return "Input: {0}\nOutput: {1}\nVerbose: {2}\nDebug: {3}".format(self.input_file, self.output_file,
+                                                                          self.verbose, self.debug)
 
     def __init__(self, *args, **kwargs):
         self.verbose = False
@@ -13,9 +15,13 @@ class ConversionOptions:
         self.output_file = ""
 
         if 'verbose' in kwargs:
-            self.verbose = kwargs.get('verbose')
+            value = kwargs.get('verbose')
+            th.validate(name_of_value='verbose', value_to_check=value, d_type=bool)
+            self.verbose = value
         if 'debug' in kwargs:
-            self.debug = kwargs.get('debug')
+            value = kwargs.get('debug')
+            th.validate(name_of_value='debug', value_to_check=value, d_type=bool)
+            self.debug = value
         if 'output' in kwargs:
             self.output = kwargs.get('output')
         if 'filename' in kwargs:

@@ -1,7 +1,10 @@
 import numpy as np
+import util.type_helper as th
+
 
 class GoesTransform:
-    def all_channels():
+    @staticmethod
+    def all_channels() -> dict:
         channel_dict = {
             1: GoesLevel(extents=GoesResolution.one_km()),
             2: GoesLevel(extents=GoesResolution.half_km()),
@@ -22,12 +25,14 @@ class GoesTransform:
         }
         return channel_dict
 
+    @staticmethod
     def channel(channel_number):
         number = int(channel_number)
         if number < 1 or number > 16:
             raise ValueError("{0} is not within valid channel range 1 - 16".format(channel_number))
         match = GoesTransform.all_channels().get(number)
         return match
+
 
 class GoesLevel(object):
     def __init__(self, *args, **kwargs):
@@ -41,24 +46,33 @@ class GoesLevel(object):
         if 'extents' in kwargs:
             self.extents = kwargs.get('extents')
         if 'verbose' in kwargs:
-            self.verbose = kwargs.get('verbose')
+            value = kwargs.get('verbose')
+            th.validate(name_of_value='verbose', value_to_check=value, d_type=bool)
+            self.verbose = value
         if 'debug' in kwargs:
-            self.debug = kwargs.get('debug')
+            value = kwargs.get('debug')
+            th.validate(name_of_value='debug', value_to_check=value, d_type=bool)
+            self.debug = value
+
 
 class GoesResolution:
 
-    def extents_for_meters(meters=2000):
+    @staticmethod
+    def extents_for_meters(meters=2000) -> tuple:
         if meters == 500:
             return GoesResolution.half_km()
         if meters == 1000:
             return GoesResolution.one_km()
         return GoesResolution.two_km()
 
-    def half_km():
+    @staticmethod
+    def half_km() -> tuple:
         return (-5434895.081637931, 501.0043288718853, 0, -5434894.837566491, 0, 501.0043288718853)
 
-    def one_km():
+    @staticmethod
+    def one_km() -> tuple:
         return (-5434894.954752678, 1002.0086577437705, 0, -5434894.964451744, 0, 1002.0086577437705)
 
-    def two_km():
+    @staticmethod
+    def two_km() -> tuple:
         return (-5434894.700982173, 2004.0173154875410, 0, -5434895.218222249, 0, 2004.0173154875410)

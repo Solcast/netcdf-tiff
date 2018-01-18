@@ -20,6 +20,7 @@ def parse_arguments():
     parser.set_defaults(debug=False)
     return parser.parse_args()
 
+
 def main():
     args = parse_arguments()
     extract_args = ConversionOptions(
@@ -31,7 +32,6 @@ def main():
 
     io_extract = Goes16Converter(verbose=extract_args.verbose, debug=extract_args.debug)
     io_extract.extract(extract_args)
-
 
 
 if __name__ == "__main__":

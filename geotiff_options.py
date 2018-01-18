@@ -1,5 +1,6 @@
 import numpy as np
 
+
 class GeoTIFF_Options:
     def __init__(self, *args, **kwargs):
         """

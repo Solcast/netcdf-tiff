@@ -3,6 +3,7 @@ from osgeo import gdal, osr, gdal_array
 
 from converters import Converters
 from geotiff_options import GeoTIFF_Options
+from metadata.goes16_file_metadata import Goes16FileMetadata
 from netcdf_reader import NetCDFReader
 from transforms import GoesResolution
 
@@ -14,15 +15,21 @@ class Goes16Converter(Converters):
         attribs = netcdf_file.variable_projection(extract_key)
 
         projection = osr.SpatialReference()
+
+        # GOES 16 seems to not be in data projection of -75 but instead -75.2
+        origin_longitude = attribs['longitude_of_projection_origin']
+        if float(origin_longitude) == float(-75):
+            origin_longitude = -75.2
+
         params = ["+proj={0}".format(attribs['long_name'].replace(' ', '_')),
-                  "+lon_0={0}".format(attribs['longitude_of_projection_origin']),
+                  "+lon_0={0}".format(origin_longitude),
                   "+h={0}".format(attribs['perspective_point_height']), "+a={0}".format(attribs['semi_major_axis']),
                   "+b={0}".format(attribs['semi_minor_axis']), "+units={0}".format('m'),
                   "+sweep={0}".format(attribs['sweep_angle_axis']), "+nodefs"]
         projection.ImportFromProj4(" ".join(params))
         return projection
 
-    def _cmip_to_visible(self, values, channel, bit_depth=np.uint8):
+    def _cmip_to_visible(self, data_values, channel, bit_depth=np.uint8):
         """
         Converts GOES-R16 CMIP (cloud and moisture product) netCDF values into
         the solrad geotiff scale. These are always on a uint8 scale (0 - 255).
@@ -47,17 +54,17 @@ class Goes16Converter(Converters):
 
         # reflective channels, values are reflectances in [0, 1]
         if channel == 2:
-            converted = values * data_desc.max
-        # emmisive channels, values are brightness temperatures in Kelvin
+            converted = data_values * data_desc.max
+        # emissive channels, values are brightness temperatures in Kelvin
         elif channel in [7, 13]:
-            # inverse of solrad IRCT formula (values in Celcius)
-            converted = -1 * ((values - 273.15) - 55) / 0.4870
+            # inverse of custom IRCT formula (values in Celsius)
+            converted = -1 * ((data_values - 273.15) - 55) / 0.4870
         else:
             #raise ValueError("Unconfigured channel: {0}".format(channel))
-            converted = values
+            converted = data_values
 
         # Replace designated fill value with 0 for nice GDAL TIFF conversion
-        converted[values.mask] = 0
+        converted[data_values.mask] = 0
 
         # convert to uint8 (will overflow if not capped)
         converted = np.round(converted)
@@ -69,7 +76,8 @@ class Goes16Converter(Converters):
     def _extract_netcdf_image(self, options, extract_key):
         netcdf_file = NetCDFReader(netcdf_file=options.input_file, debug=self.debug, verbose=self.verbose)
         extracted_data = netcdf_file.read(extract_key)
-        scaled_data = self._cmip_to_visible(extracted_data, 2)
+        scaled_data = self._cmip_to_visible(data_values=extracted_data,
+                                            channel=int(Goes16FileMetadata.parse(options.input_file).sensor.channel))
         image_data = np.flip(np.matrix(scaled_data), 0)  # GOESR images are inverted for reprojection
         return image_data
 
