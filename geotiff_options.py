@@ -1,29 +1,27 @@
 import numpy as np
 
 class GeoTIFF_Options:
-
-    output_file = ""
-    data = np.array()
-    gdal_type = np.uint8
-    transform = None
-    projection = None
-    empty = None
-
     def __init__(self, *args, **kwargs):
         """
 
         :rtype: object
         """
-        self.transform = None
-        self.input_file = ""
-        self.netcdf_details = None
         self.output_file = ""
+        self.data = np.array([])
+        self.gdal_type = np.uint8
+        self.extents = None
+        self.projection = None
+        self.empty = None
 
-        if 'input_file' in kwargs:
-            self.input_file = kwargs.get('input_file')
-        if 'netcdf_details' in kwargs:
-            self.netcdf_details = kwargs.get('netcdf_details')
         if 'output_file' in kwargs:
             self.output_file = kwargs.get('output_file')
-        if 'transform' in kwargs:
-            self.transform = kwargs.get('transform')
+        if 'data' in kwargs:
+            self.data = kwargs.get('data')
+        if 'gdal_type' in kwargs:
+            self.gdal_type = kwargs.get('gdal_type')
+        if 'extents' in kwargs:
+            self.extents = kwargs.get('extents')
+        if 'projection' in kwargs:
+            self.projection = kwargs.get('projection')
+        if 'empty' in kwargs:
+            self.empty = kwargs.get('empty')

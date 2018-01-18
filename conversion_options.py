@@ -1,15 +1,17 @@
 import os
 
 class ConversionOptions:
-    verbose = False
-    debug = False
-    input_file = ""
-    output_file = ""
+
 
     def __str__(self):
         return "Input: {0}\nOutput: {1}\nVerbose: {2}\nDebug: {3}".format(self.input_file, self.output_file, self.verbose, self.debug)
 
     def __init__(self, *args, **kwargs):
+        self.verbose = False
+        self.debug = False
+        self.input_file = ""
+        self.output_file = ""
+
         if 'verbose' in kwargs:
             self.verbose = kwargs.get('verbose')
         if 'debug' in kwargs:
