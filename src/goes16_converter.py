@@ -1,5 +1,5 @@
 import numpy as np
-from osgeo import gdal, osr, gdal_array
+import osgeo
 
 from src.converters import Converters
 from src.geotiff_options import GeoTIFF_Options
@@ -14,7 +14,7 @@ class Goes16Converter(Converters):
         netcdf_file = NetCDFReader(netcdf_file=options.input_file, debug=self.debug, verbose=self.verbose)
         attribs = netcdf_file.variable_projection(variable_name)
 
-        projection = osr.SpatialReference()
+        projection = osgeo.osr.SpatialReference()
 
         # GOES 16 seems to not be in data projection of -75 but instead -75.2
         origin_longitude = attribs['longitude_of_projection_origin']
@@ -84,8 +84,8 @@ class Goes16Converter(Converters):
 
     def _to_geotiff(self, options):
         (y_res, x_res) = options.data.shape
-        driver = gdal.GetDriverByName('GTiff')
-        data_type = gdal_array.NumericTypeCodeToGDALTypeCode(options.gdal_type)
+        driver = osgeo.gdal.GetDriverByName('GTiff')
+        data_type = osgeo.gdal_array.NumericTypeCodeToGDALTypeCode(options.gdal_type)
         image = driver.Create(options.output_file, x_res, y_res, eType=data_type)
 
         if options.extents is not None:
@@ -111,10 +111,10 @@ class Goes16Converter(Converters):
     def _gdal_warp(self, options, tiff_file,
                    projection="+proj=geos +lon_0=-75.2 +h=35786023 +x_0=0 +y_0=0 +ellps=GRS80 +units=m +no_defs"):
         world_latlng_tiff = "{0}_world.tiff".format(options.input_file)
-        reproject = gdal.Open(tiff_file)
-        reproject = gdal.Warp(world_latlng_tiff, reproject, format="GTiff",
-                              srcSRS=projection,
-                              dstSRS="EPSG:4326", resampleAlg=gdal.GRIORA_Bilinear)
+        reproject = osgeo.gdal.Open(tiff_file)
+        reproject = osgeo.gdal.Warp(world_latlng_tiff, reproject, format="GTiff",
+                                    srcSRS=projection,
+                                    dstSRS="EPSG:4326", resampleAlg=osgeo.gdal.GRIORA_Bilinear)
         reproject = None
         return world_latlng_tiff
 
@@ -122,9 +122,9 @@ class Goes16Converter(Converters):
     def _gdal_extraction(self, options, variable_name):
         netcdf_name = "NETCDF:{0}:{1}".format(options.input_file, variable_name)
         world_tiff_file = "{0}.tiff".format(options.input_file)
-        net_cdf_data = gdal.Open(netcdf_name)
-        net_cdf_data = gdal.Translate(world_tiff_file, net_cdf_data)
-        projection = osr.SpatialReference()
+        net_cdf_data = osgeo.gdal.Open(netcdf_name)
+        net_cdf_data = osgeo.gdal.Translate(world_tiff_file, net_cdf_data)
+        projection = osgeo.osr.SpatialReference()
         projection.ImportFromWkt(net_cdf_data.GetProjectionRef())
         net_cdf_data = None
         return projection
