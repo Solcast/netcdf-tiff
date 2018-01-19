@@ -107,6 +107,15 @@ class Goes16Converter(Converters):
         resolution_in_meters = int(float(resolution.upper().split("km".upper())[0]) * 1000)
         return GoesResolution.extents_for_meters(resolution_in_meters)
 
+    def _gdal_warp(self, options, tiff_file, projection="+proj=geos +lon_0=-75.2 +h=35786023 +x_0=0 +y_0=0 +ellps=GRS80 +units=m +no_defs"):
+        world_latlng_tiff = "{0}_world.tiff".format(options.input_file)
+        reproject = gdal.Open(tiff_file)
+        reproject = gdal.Warp(world_latlng_tiff, reproject, format="GTiff",
+                              srcSRS=projection,
+                              dstSRS="EPSG:4326", resampleAlg=gdal.GRIORA_Bilinear)
+        reproject = None
+        return world_latlng_tiff
+
     def _gdal_extraction(self, options, variable_name):
         netcdf_name = "NETCDF:{0}:{1}".format(options.input_file, variable_name)
         world_tiff_file = "{0}.tiff".format(options.input_file)
@@ -115,13 +124,7 @@ class Goes16Converter(Converters):
         projection = osr.SpatialReference()
         projection.ImportFromWkt(net_cdf_data.GetProjectionRef())
         net_cdf_data = None
-        world_latlng_tiff = "{0}_world.tiff".format(options.input_file)
-        reproject = gdal.Open(world_tiff_file)
-        reproject = gdal.Warp(world_latlng_tiff, reproject, format="GTiff",
-                              srcSRS="+proj=geos +lon_0=-75.2 +h=35786023 +x_0=0 +y_0=0 +ellps=GRS80 +units=m +no_defs",
-                              dstSRS="EPSG:4326", resampleAlg=gdal.GRIORA_Bilinear)
-        reproject = None
-        return world_latlng_tiff
+        return projection
 
     def extract(self, options, variable_name="CMI"):
         tiff_options = GeoTIFF_Options(output_file=options.output_file,
