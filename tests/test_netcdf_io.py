@@ -5,7 +5,8 @@ import netCDF4
 import numpy as np
 import pytest
 
-from .. import goesr_io
+from src.conversion_options import ConversionOptions
+from src.goes16_converter import Goes16Converter
 
 FILL_VALUE = 65535
 
@@ -43,14 +44,16 @@ def test__cmip_to_solrad(val, channel, exp_unmasked):
     and checks that masked values are always converted to 0
     """
     # try it unmasked
+
+    goes16 = Goes16Converter()
     unmasked = np.ma.masked_array([val], [False], fill_value=FILL_VALUE)
-    out = goesr_io._cmip_to_solrad(unmasked, channel)
+    out = goes16._cmip_to_visible(unmasked, channel)
     np.testing.assert_array_equal(out, exp_unmasked)
     assert out.dtype.name == 'uint8'
 
     # if it is masked, then should always return 0
     masked = np.ma.masked_array([val], [True], fill_value=FILL_VALUE)
-    out = goesr_io._cmip_to_solrad(masked, channel)
+    out = goes16._cmip_to_visible(masked, channel)
     np.testing.assert_array_equal(out, 0)
     assert out.dtype.name == 'uint8'
 
@@ -89,7 +92,9 @@ def test__cmip_to_solrad(val, channel, exp_unmasked):
 )
 def test__cmip_to_solrad_array(values, channel, exp):
     """Tests _cmip_to_solrad produces correct array output"""
-    out = goesr_io._cmip_to_solrad(values, channel)
+    goes16 = Goes16Converter()
+
+    out = goes16._cmip_to_visible(values, channel)
     np.testing.assert_array_equal(out, exp)
     assert out.dtype.name == 'uint8'
 
@@ -114,32 +119,11 @@ def test_extract_netcdf_image(tmpdir):
     ]
     test_ds.close()
 
-    go = goesr_io.GoesrIO()
-    out = go.extract_netcdf_image(nc_name, np.uint8)
+    goes16 = Goes16Converter()
 
-    exp = np.array([[54, 0], [161, 0], [0, 255]])
+    options = ConversionOptions(filename=nc_name)
+    out = goes16._extract_netcdf_image(options, "CMI")
+
+    exp = np.array([[0, 255], [161, 0], [54, 0]])
     np.testing.assert_array_equal(out, exp)
     assert out.dtype.name == 'uint8'
-
-
-@pytest.mark.parametrize(
-    ('source_netcdf', 'dtype', 'msg'),
-    [
-        (
-                'OR_ABI-L2-MCMIPF-M3C07_G16_s20173531600429_e20173531611208_c20173531611264.nc',
-                np.uint8,
-                'Unsupported product: "MCMIP", must be "CMIP"'
-        ),
-        (
-                'OR_ABI-L2-CMIPF-M3C07_G16_s20173531600429_e20173531611208_c20173531611264.nc',
-                np.int8,
-                "Unsupported dtype <class 'numpy.int8'>, must be np.uint8"
-        )
-    ]
-)
-def test_extract_netcdf_image_raises(source_netcdf, dtype, msg):
-    """Tests extract_netcdf_image raises ValueError as expected"""
-    go = goesr_io.GoesrIO()
-    with pytest.raises(ValueError) as excinfo:
-        out = go.extract_netcdf_image(source_netcdf, dtype)
-    assert msg in str(excinfo)

@@ -1,3 +1,4 @@
+import os
 import src.util.type_helper as th
 from src.metadata.goes16_sensor import Goes16Sensor
 from src.metadata.goes16_timestamps import Goes16TimeStamps
@@ -24,7 +25,7 @@ class Goes16FileNameMetadata:
         if len(text) == 0:
             return clone
 
-        upper_text = text.upper();
+        upper_text = os.path.basename(text).upper();
         filename_dict = {
             "system": upper_text.split("_")[0],
             "sensor": upper_text.split("_")[1],

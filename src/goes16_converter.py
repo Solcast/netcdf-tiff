@@ -76,9 +76,9 @@ class Goes16Converter(Converters):
     def _extract_netcdf_image(self, options, extract_key):
         netcdf_file = NetCDFReader(netcdf_file=options.input_file, debug=self.debug, verbose=self.verbose)
         extracted_data = netcdf_file.read(extract_key)
-        scaled_data = self._cmip_to_visible(data_values=extracted_data,
-                                            channel=int(
-                                                Goes16FileNameMetadata.parse(options.input_file).sensor.channel))
+
+        channel_text = Goes16FileNameMetadata.parse(options.input_file).sensor.channel
+        scaled_data = self._cmip_to_visible(data_values=extracted_data, channel=int(channel_text))
         image_data = np.flip(np.matrix(scaled_data), 0)  # GOESR images are inverted for reprojection
         return image_data
 
