@@ -17,6 +17,7 @@ install:
   - activate test-environment
   - pip install coverage
   - pip install pytest
+  - pip install netCDF4
   - pip install pandas
 
 test_script:
