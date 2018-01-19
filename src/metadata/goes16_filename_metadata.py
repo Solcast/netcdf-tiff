@@ -1,9 +1,9 @@
+import src.util.type_helper as th
 from src.metadata.goes16_sensor import Goes16Sensor
 from src.metadata.goes16_timestamps import Goes16TimeStamps
-import src.util.type_helper as th
 
 
-class Goes16FileMetadata:
+class Goes16FileNameMetadata:
 
     @staticmethod
     def find_timestamp_text(text, starts_with="", delimiter="_") -> str:
@@ -18,9 +18,9 @@ class Goes16FileMetadata:
     def parse(text):
         """
 
-        :rtype: Goes16FileMetadata
+        :rtype: Goes16FileNameMetadata
         """
-        clone = Goes16FileMetadata()
+        clone = Goes16FileNameMetadata()
         if len(text) == 0:
             return clone
 

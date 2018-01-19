@@ -1,0 +1,4 @@
+pytest
+pytz
+netCDF4
+numpy

@@ -1,12 +1,14 @@
 """
 Tests goesr_io
 """
-import pytest
 import netCDF4
 import numpy as np
+import pytest
+
 from .. import goesr_io
 
 FILL_VALUE = 65535
+
 
 @pytest.mark.parametrize(
     ('val', 'channel', 'exp_unmasked'),
@@ -15,8 +17,8 @@ FILL_VALUE = 65535
         (-1, 2, 0),
         (0, 2, 0),
         (0.005, 2, 1),
-        (0.23, 2, 59),   # round up
-        (0.852, 2, 217), # round down
+        (0.23, 2, 59),  # round up
+        (0.852, 2, 217),  # round down
         (0.995, 2, 254),
         (1, 2, 255),
         (1.12, 2, 255),
@@ -25,8 +27,8 @@ FILL_VALUE = 65535
         (330, 7, 0),
         (328.15, 7, 0),  # 55 degC
         (327.5, 7, 1),
-        (300, 7, 58),    # round up
-        (270, 7, 119),   # round down
+        (300, 7, 58),  # round up
+        (270, 7, 119),  # round down
         (204.5, 7, 254),
         (203.965, 7, 255),  # -67.185 degC
         (150, 7, 255),
@@ -56,32 +58,32 @@ def test__cmip_to_solrad(val, channel, exp_unmasked):
 @pytest.mark.parametrize(
     ('values', 'channel', 'exp'),
     [
-        (   # reflective channel 02
-            np.ma.masked_array(
-                [[0.5, 0.23], [0, 1]],
-                [[True, False], [False, False]],
-                fill_value=FILL_VALUE
-            ),
-            2,
-            np.array([[0, 59], [0, 255]])
+        (  # reflective channel 02
+                np.ma.masked_array(
+                    [[0.5, 0.23], [0, 1]],
+                    [[True, False], [False, False]],
+                    fill_value=FILL_VALUE
+                ),
+                2,
+                np.array([[0, 59], [0, 255]])
         ),
-        (   # emmissive channel 07
-            np.ma.masked_array(
-                [[300, 270], [330, 200]],
-                [[False, False], [True, True]],
-                fill_value=FILL_VALUE
-            ),
-            7,
-            np.array([[58, 119], [0, 0]])
+        (  # emmissive channel 07
+                np.ma.masked_array(
+                    [[300, 270], [330, 200]],
+                    [[False, False], [True, True]],
+                    fill_value=FILL_VALUE
+                ),
+                7,
+                np.array([[58, 119], [0, 0]])
         ),
-        (   # emmissive channel 13 (as above)
-            np.ma.masked_array(
-                [[300, 270], [330, 200]],
-                [[False, False], [True, True]],
-                fill_value=FILL_VALUE
-            ),
-            13,
-            np.array([[58, 119], [0, 0]])
+        (  # emmissive channel 13 (as above)
+                np.ma.masked_array(
+                    [[300, 270], [330, 200]],
+                    [[False, False], [True, True]],
+                    fill_value=FILL_VALUE
+                ),
+                13,
+                np.array([[58, 119], [0, 0]])
         ),
     ]
 )
@@ -124,14 +126,14 @@ def test_extract_netcdf_image(tmpdir):
     ('source_netcdf', 'dtype', 'msg'),
     [
         (
-            'OR_ABI-L2-MCMIPF-M3C07_G16_s20173531600429_e20173531611208_c20173531611264.nc',
-            np.uint8,
-            'Unsupported product: "MCMIP", must be "CMIP"'
+                'OR_ABI-L2-MCMIPF-M3C07_G16_s20173531600429_e20173531611208_c20173531611264.nc',
+                np.uint8,
+                'Unsupported product: "MCMIP", must be "CMIP"'
         ),
         (
-            'OR_ABI-L2-CMIPF-M3C07_G16_s20173531600429_e20173531611208_c20173531611264.nc',
-            np.int8,
-            "Unsupported dtype <class 'numpy.int8'>, must be np.uint8"
+                'OR_ABI-L2-CMIPF-M3C07_G16_s20173531600429_e20173531611208_c20173531611264.nc',
+                np.int8,
+                "Unsupported dtype <class 'numpy.int8'>, must be np.uint8"
         )
     ]
 )

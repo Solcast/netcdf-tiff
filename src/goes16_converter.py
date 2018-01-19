@@ -3,7 +3,7 @@ from osgeo import gdal, osr, gdal_array
 
 from src.converters import Converters
 from src.geotiff_options import GeoTIFF_Options
-from src.metadata.goes16_file_metadata import Goes16FileMetadata
+from src.metadata.goes16_filename_metadata import Goes16FileNameMetadata
 from src.netcdf_reader import NetCDFReader
 from src.transforms import GoesResolution
 
@@ -60,7 +60,7 @@ class Goes16Converter(Converters):
             # inverse of custom IRCT formula (values in Celsius)
             converted = -1 * ((data_values - 273.15) - 55) / 0.4870
         else:
-            #raise ValueError("Unconfigured channel: {0}".format(channel))
+            # raise ValueError("Unconfigured channel: {0}".format(channel))
             converted = data_values
 
         # Replace designated fill value with 0 for nice GDAL TIFF conversion
@@ -77,7 +77,8 @@ class Goes16Converter(Converters):
         netcdf_file = NetCDFReader(netcdf_file=options.input_file, debug=self.debug, verbose=self.verbose)
         extracted_data = netcdf_file.read(extract_key)
         scaled_data = self._cmip_to_visible(data_values=extracted_data,
-                                            channel=int(Goes16FileMetadata.parse(options.input_file).sensor.channel))
+                                            channel=int(
+                                                Goes16FileNameMetadata.parse(options.input_file).sensor.channel))
         image_data = np.flip(np.matrix(scaled_data), 0)  # GOESR images are inverted for reprojection
         return image_data
 
@@ -107,7 +108,8 @@ class Goes16Converter(Converters):
         resolution_in_meters = int(float(resolution.upper().split("km".upper())[0]) * 1000)
         return GoesResolution.extents_for_meters(resolution_in_meters)
 
-    def _gdal_warp(self, options, tiff_file, projection="+proj=geos +lon_0=-75.2 +h=35786023 +x_0=0 +y_0=0 +ellps=GRS80 +units=m +no_defs"):
+    def _gdal_warp(self, options, tiff_file,
+                   projection="+proj=geos +lon_0=-75.2 +h=35786023 +x_0=0 +y_0=0 +ellps=GRS80 +units=m +no_defs"):
         world_latlng_tiff = "{0}_world.tiff".format(options.input_file)
         reproject = gdal.Open(tiff_file)
         reproject = gdal.Warp(world_latlng_tiff, reproject, format="GTiff",
@@ -116,6 +118,7 @@ class Goes16Converter(Converters):
         reproject = None
         return world_latlng_tiff
 
+    #  https://www.linkedin.com/pulse/convert-netcdf4-file-geotiff-using-python-chonghua-yin
     def _gdal_extraction(self, options, variable_name):
         netcdf_name = "NETCDF:{0}:{1}".format(options.input_file, variable_name)
         world_tiff_file = "{0}.tiff".format(options.input_file)
