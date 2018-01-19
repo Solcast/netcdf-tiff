@@ -107,11 +107,26 @@ class Goes16Converter(Converters):
         resolution_in_meters = int(float(resolution.upper().split("km".upper())[0]) * 1000)
         return GoesResolution.extents_for_meters(resolution_in_meters)
 
-    def extract(self, options, extract_key="CMI"):
+    def _gdal_extraction(self, options, variable_name):
+        netcdf_name = "NETCDF:{0}:{1}".format(options.input_file, variable_name)
+        world_tiff_file = "{0}.tiff".format(options.input_file)
+        net_cdf_data = gdal.Open(netcdf_name)
+        net_cdf_data = gdal.Translate(world_tiff_file, net_cdf_data)
+        projection = osr.SpatialReference()
+        projection.ImportFromWkt(net_cdf_data.GetProjectionRef())
+        net_cdf_data = None
+        world_latlng_tiff = "{0}_world.tiff".format(options.input_file)
+        reproject = gdal.Open(world_tiff_file)
+        reproject = gdal.Warp(world_latlng_tiff, reproject, format="GTiff",
+                              srcSRS="+proj=geos +lon_0=-75.2 +h=35786023 +x_0=0 +y_0=0 +ellps=GRS80 +units=m +no_defs",
+                              dstSRS="EPSG:4326", resampleAlg=gdal.GRIORA_Bilinear)
+        reproject = None
+        return world_latlng_tiff
 
+    def extract(self, options, variable_name="CMI"):
         tiff_options = GeoTIFF_Options(output_file=options.output_file,
-                                       data=self._extract_netcdf_image(options, extract_key),
-                                       projection=self._extract_projection(options, extract_key),
+                                       data=self._extract_netcdf_image(options, variable_name),
+                                       projection=self._extract_projection(options, variable_name),
                                        extents=self._get_transform(options))
         tiff_data = self._to_geotiff(tiff_options)
         return tiff_data
