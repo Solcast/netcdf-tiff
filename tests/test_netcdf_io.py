@@ -1,5 +1,5 @@
 """
-Tests goesr_io
+Tests goes16_io
 """
 import netCDF4
 import numpy as np

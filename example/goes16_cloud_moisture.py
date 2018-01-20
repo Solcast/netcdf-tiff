@@ -30,9 +30,8 @@ def main():
         debug=args.debug)
     print(extract_args)
 
-    io_extract = Goes16Converter(verbose=extract_args.verbose, debug=extract_args.debug)
-    io_extract.extract(extract_args)
-
+    goes16 = Goes16Converter(verbose=extract_args.verbose, debug=extract_args.debug)
+    result = goes16.extract(extract_args)
 
 if __name__ == "__main__":
     print('Starting {0}'.format(str(sys.argv)))

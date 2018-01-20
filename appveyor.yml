@@ -19,7 +19,6 @@ install:
   - pip install coverage
   - pip install pytest
   - pip install netCDF4
-  - pip install osgeo
   - pip install pandas
 
 test_script:

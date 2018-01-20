@@ -1,3 +1,4 @@
+xarray
 pytest
 pytz
 netCDF4
