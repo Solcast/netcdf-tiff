@@ -12,11 +12,11 @@ class Goes16Converter(Converters):
 
     @property
     def extents(self):
-        return [-5434894.885056, -5434894.885056, 5434894.885056, 5434894.885056]
+        return [-5434894.885056, -5434894.885056, 5434894.885056, 5434894.885056] # From a raw gdal conversion
 
     @property
     def extents_WGS84(self):
-        return [-160, -80.0, 0.0, 80.0]
+        return [-160, -80.0, 0.0, 80.0] # Reference extents
 
     @staticmethod
     def geo_transform(extent, y_rows, x_columns):
@@ -25,16 +25,20 @@ class Goes16Converter(Converters):
         res_y = (extent[3] - extent[1]) / y_rows
         return [extent[0], res_x, 0, extent[3], 0, -res_y]
 
-    def _extract_projection(self, options, variable_name):
+    def _extract_projection_def(self, options, variable_name):
         netcdf_file = NetCDFReader(netcdf_file=options.input_file, debug=self.debug, verbose=self.verbose)
         attribs = netcdf_file.variable_projection(variable_name)
         projection = osgeo.osr.SpatialReference()
-        params = ["+proj={0}".format(attribs['long_name'].replace(' ', '_')),
+        params = ["+proj=geos", # The projection name is very important this means geostationary
                   "+lon_0={0}".format(attribs['longitude_of_projection_origin']),
-                  "+h={0}".format(attribs['perspective_point_height']), "+a={0}".format(attribs['semi_major_axis']),
-                  "+b={0}".format(attribs['semi_minor_axis']), "+units={0}".format('m'),
-                  "+sweep={0}".format(attribs['sweep_angle_axis']), "+nodefs"]
-        projection.ImportFromProj4(" ".join(params))
+                  "+h={0}".format(attribs['perspective_point_height']),
+                  "+a={0}".format(attribs['semi_major_axis']),
+                  "+b={0}".format(attribs['semi_minor_axis']),
+                  "+units={0}".format('m'),
+                  "+sweep={0}".format(attribs['sweep_angle_axis']),
+                  "+no_defs"]
+        command_text = " ".join(params)
+        projection.ImportFromProj4(command_text)
         return projection
 
     def _cmip_to_visible(self, data_values, channel, bit_depth=np.uint8):
@@ -88,19 +92,21 @@ class Goes16Converter(Converters):
         scaled_data = self._cmip_to_visible(data_values=extracted_data, channel=int(channel_text))
         return scaled_data
 
-    def _to_geotiff(self, options):
-
+    def _transform_extents(self, options):
+        transform = options.extents
+        if transform is not None:
+            return transform
         (y_res, x_res) = options.data.shape
         transform = Goes16Converter.geo_transform(self.extents , y_res, x_res)
-        projection = osr.SpatialReference()
-        projection.ImportFromProj4('+proj=geos +lon_0=-75.0 +h=35786023.0 +a=6378137.0 +b=6356752.31414 +units=m +sweep=x +no_defs')
+        return transform
 
+    def _write_to_memory(self, options):
+        transform = self._transform_extents(options)
         (y_res, x_res) = options.data.shape
         driver = osgeo.gdal.GetDriverByName('MEM')
         export_type = osgeo.gdal_array.NumericTypeCodeToGDALTypeCode(options.gdal_type)
-
         image_mem = driver.Create('grid', x_res, y_res, eType=export_type)
-
+        projection = options.projection
         if transform is not None:
             image_mem.SetGeoTransform(transform)
         if projection is not None:
@@ -110,22 +116,36 @@ class Goes16Converter(Converters):
             band.SetNoDataValue(options.empty)
         band.WriteArray(options.data)
         band.FlushCache()
+        return image_mem
+
+    @staticmethod
+    def latlng_projection():
+        projection = osr.SpatialReference()
+        projection.ImportFromProj4('+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs')
+        return projection
+
+
+    def _to_geotiff(self, options):
+
+        (y_res, x_res) = options.data.shape
+        export_type = osgeo.gdal_array.NumericTypeCodeToGDALTypeCode(options.gdal_type)
+        image_mem = self._write_to_memory(options)
+        target_proj_wkt = Goes16Converter.latlng_projection().ExportToWkt()
 
         gtiff_driver = osgeo.gdal.GetDriverByName('GTiff')
         image = gtiff_driver.Create(options.output_file, x_res, y_res, eType=export_type)
+        image.SetProjection(target_proj_wkt)
+        image.SetGeoTransform(Goes16Converter.geo_transform(self.extents_WGS84, y_res, x_res))
 
-        targetPrj = osr.SpatialReference()
-        targetPrj.ImportFromProj4('+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs')
-        goesTransform = Goes16Converter.geo_transform(self.extents_WGS84, y_res, x_res)
+        osgeo.gdal.ReprojectImage(image_mem,
+                                  image,
+                                  options.projection.ExportToWkt(),
+                                  target_proj_wkt,
+                                  osgeo.gdal.GRA_NearestNeighbour,
+                                  options=['NUM_THREADS=ALL_CPUS'])
 
-        image.SetProjection(targetPrj.ExportToWkt())
-        image.SetGeoTransform(goesTransform)
-
-        osgeo.gdal.ReprojectImage(image_mem, image, projection.ExportToWkt(), targetPrj.ExportToWkt(), osgeo.gdal.GRA_NearestNeighbour,
-                            options=['NUM_THREADS=ALL_CPUS'])
-
-        band_img = image.GetRasterBand(1)
-        band_img.FlushCache()
+        raster_image_data = image.GetRasterBand(1)
+        raster_image_data.FlushCache()
 
         return image
 
@@ -138,28 +158,9 @@ class Goes16Converter(Converters):
         resolution_in_meters = int(float(resolution.upper().split("km".upper())[0]) * 1000)
         return GoesResolution.extents_for_meters(resolution_in_meters)
 
-    def _gdal_warp(self, options, tiff_file,
-                   projection="+proj=geos +lon_0=-75.2 +h=35786023 +x_0=0 +y_0=0 +ellps=GRS80 +units=m +no_defs"):
-        world_latlng_tiff = "{0}_world.tiff".format(options.input_file)
-        reproject = osgeo.gdal.Open(tiff_file)
-        reproject = osgeo.gdal.Warp(world_latlng_tiff, reproject, format="GTiff",
-                                    srcSRS=projection,
-                                    dstSRS="EPSG:4326", resampleAlg=osgeo.gdal.GRIORA_Bilinear)
-        reproject = None
-        return world_latlng_tiff
-
-    #  https://www.linkedin.com/pulse/convert-netcdf4-file-geotiff-using-python-chonghua-yin
-    def _gdal_extraction(self, options, variable_name):
-        netcdf_name = "NETCDF:{0}:{1}".format(options.input_file, variable_name)
-        world_tiff_file = "{0}.tiff".format(options.input_file)
-        net_cdf_data = osgeo.gdal.Open(netcdf_name)
-        net_cdf_data = osgeo.gdal.Translate(world_tiff_file, net_cdf_data)
-        projection = osgeo.osr.SpatialReference()
-        projection.ImportFromWkt(net_cdf_data.GetProjectionRef())
-        net_cdf_data = None
-        return projection
-
     def extract(self, options, variable_name="CMI"):
-        tiff_options = GeoTIFF_Options(output_file=options.output_file, data=self._extract_netcdf_image(options, variable_name))
+        tiff_options = GeoTIFF_Options(output_file=options.output_file,
+                                       projection=self._extract_projection_def(options, variable_name),
+                                       data=self._extract_netcdf_image(options, variable_name))
         tiff_data = self._to_geotiff(tiff_options)
         return tiff_data
