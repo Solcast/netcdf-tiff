@@ -1,0 +1,1 @@
+echo "aws s3 sync s3://noaa-goes16/ABI-L2-CMIPF/$(date -u '+%Y/%j/%H')/ ."

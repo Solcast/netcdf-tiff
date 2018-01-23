@@ -88,9 +88,12 @@ class Goes16Converter(Converters):
     def _extract_netcdf_image(self, options, extract_key):
         netcdf_file = NetCDFReader(netcdf_file=options.input_file, debug=self.debug, verbose=self.verbose)
         extracted_data = netcdf_file.read(extract_key)
-        channel_text = Goes16FileNameMetadata.parse(options.input_file).sensor.channel
-        scaled_data = self._cmip_to_visible(data_values=extracted_data, channel=int(channel_text))
-        return scaled_data
+        filename_metadata = Goes16FileNameMetadata.parse(options.input_file)
+        if filename_metadata is not None:
+            channel_text = filename_metadata.sensor.channel
+            scaled_data = self._cmip_to_visible(data_values=extracted_data, channel=int(channel_text))
+            return scaled_data
+        return extracted_data
 
     def _transform_extents(self, options):
         transform = options.extents

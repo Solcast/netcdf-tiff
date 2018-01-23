@@ -26,14 +26,17 @@ class Goes16FileNameMetadata:
             return clone
 
         upper_text = os.path.basename(text).upper();
-        filename_dict = {
-            "system": upper_text.split("_")[0],
-            "sensor": upper_text.split("_")[1],
-            "satellite": upper_text.split("_")[2],
-            "start_scan": clone.find_timestamp_text(upper_text, "s".upper()),
-            "end_scan": clone.find_timestamp_text(upper_text, "e".upper()),
-            "created": clone.find_timestamp_text(upper_text, "c".upper())
-        }
+        try:
+            filename_dict = {
+                "system": upper_text.split("_")[0],
+                "sensor": upper_text.split("_")[1],
+                "satellite": upper_text.split("_")[2],
+                "start_scan": clone.find_timestamp_text(upper_text, "s".upper()),
+                "end_scan": clone.find_timestamp_text(upper_text, "e".upper()),
+                "created": clone.find_timestamp_text(upper_text, "c".upper())
+            }
+        except:
+            return None
 
         clone.original_filename = text
         clone.system = filename_dict["system"]
