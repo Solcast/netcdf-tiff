@@ -124,6 +124,6 @@ def test_extract_netcdf_image(tmpdir):
     options = ConversionOptions(filename=nc_name)
     out = goes16._extract_netcdf_image(options, "CMI")
 
-    exp = np.array([[0, 255], [161, 0], [54, 0]])
+    exp = np.array([[54, 0], [161, 0] , [0, 255]])
     np.testing.assert_array_equal(out, exp)
     assert out.dtype.name == 'uint8'
