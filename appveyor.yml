@@ -15,7 +15,7 @@ install:
   - conda info -a
   - "conda create -q -n test-environment python=%PYTHON_VERSION% numpy scipy nose"
   - activate test-environment
-  - conda install -q h5py lxml numpy requests proj4 geos cartopy setuptools gdal
+  - conda install -q h5py lxml numpy requests proj4 geos cartopy setuptools gdal pytest
   - pip install coverage
   - pip install pytest
   - pip install netCDF4
