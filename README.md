@@ -28,10 +28,10 @@ Python 3 library designed to extract GeoTIFF images from NETCDF4+ files.  Workin
 ```
 
 ### Live GOES16 data sources
-[NOAA](http://www.noaa.gov/) is currently producing data extracts for public use on [AWS](https://aws.amazon.com/).  You should download and setup your [AWS CLI](https://aws.amazon.com/cli/) tool first in your choice of environment Linux/mac OS/Windows.  There are scripts in the subfolder `/test/data/` that will generate the command to obtain the latest netcdf files for you to work with
+[NOAA](http://www.noaa.gov/) is currently producing data extracts for public use on [AWS](https://aws.amazon.com/).  You should download and setup your [AWS CLI](https://aws.amazon.com/cli/) tool first in your choice of environment Linux/mac OS/Windows.  There are scripts in the subfolder `/tests/data/` that will generate the command to obtain the latest netcdf files for you to work with
 
-* [Linux/mac OS](/test/data/get_goes16_data.sh)
-* [Windows](/test/data/get_goes16_data.ps1)
+* [Linux/mac OS](/tests/data/get_goes16_data.sh)
+* [Windows](/tests/data/get_goes16_data.ps1)
  
 
 ### Need help?
