@@ -1,5 +1,6 @@
 import numpy as np
 import osgeo
+from osgeo import gdal, gdal_array, osr
 
 from src.converters import Converters
 from src.geotiff_options import GeoTIFF_Options
@@ -7,22 +8,29 @@ from src.metadata.goes16_filename_metadata import Goes16FileNameMetadata
 from src.netcdf_reader import NetCDFReader
 from src.transforms import GoesResolution
 
-
 class Goes16Converter(Converters):
+
+    @property
+    def extents(self):
+        return [-5434894.885056, -5434894.885056, 5434894.885056, 5434894.885056]
+
+    @property
+    def extents_WGS84(self):
+        return [-160, -80.0, 0.0, 80.0]
+
+    @staticmethod
+    def geo_transform(extent, y_rows, x_columns):
+        # Compute resolution based on data dimension
+        res_x = (extent[2] - extent[0]) / x_columns
+        res_y = (extent[3] - extent[1]) / y_rows
+        return [extent[0], res_x, 0, extent[3], 0, -res_y]
 
     def _extract_projection(self, options, variable_name):
         netcdf_file = NetCDFReader(netcdf_file=options.input_file, debug=self.debug, verbose=self.verbose)
         attribs = netcdf_file.variable_projection(variable_name)
-
         projection = osgeo.osr.SpatialReference()
-
-        # GOES 16 seems to not be in data projection of -75 but instead -75.2
-        origin_longitude = attribs['longitude_of_projection_origin']
-        if float(origin_longitude) == float(-75):
-            origin_longitude = -75.2
-
         params = ["+proj={0}".format(attribs['long_name'].replace(' ', '_')),
-                  "+lon_0={0}".format(origin_longitude),
+                  "+lon_0={0}".format(attribs['longitude_of_projection_origin']),
                   "+h={0}".format(attribs['perspective_point_height']), "+a={0}".format(attribs['semi_major_axis']),
                   "+b={0}".format(attribs['semi_minor_axis']), "+units={0}".format('m'),
                   "+sweep={0}".format(attribs['sweep_angle_axis']), "+nodefs"]
@@ -76,27 +84,49 @@ class Goes16Converter(Converters):
     def _extract_netcdf_image(self, options, extract_key):
         netcdf_file = NetCDFReader(netcdf_file=options.input_file, debug=self.debug, verbose=self.verbose)
         extracted_data = netcdf_file.read(extract_key)
-
         channel_text = Goes16FileNameMetadata.parse(options.input_file).sensor.channel
         scaled_data = self._cmip_to_visible(data_values=extracted_data, channel=int(channel_text))
-        image_data = np.flip(np.matrix(scaled_data), 0)  # GOESR images are inverted for reprojection
-        return image_data
+        return scaled_data
 
     def _to_geotiff(self, options):
-        (y_res, x_res) = options.data.shape
-        driver = osgeo.gdal.GetDriverByName('GTiff')
-        data_type = osgeo.gdal_array.NumericTypeCodeToGDALTypeCode(options.gdal_type)
-        image = driver.Create(options.output_file, x_res, y_res, eType=data_type)
 
-        if options.extents is not None:
-            image.SetGeoTransform(options.extents)
-        if options.projection is not None:
-            image.SetProjection(options.projection.ExportToWkt())
-        band = image.GetRasterBand(1)
+        (y_res, x_res) = options.data.shape
+        transform = Goes16Converter.geo_transform(self.extents , y_res, x_res)
+        projection = osr.SpatialReference()
+        projection.ImportFromProj4('+proj=geos +lon_0=-75.0 +h=35786023.0 +a=6378137.0 +b=6356752.31414 +units=m +sweep=x +no_defs')
+
+        (y_res, x_res) = options.data.shape
+        driver = osgeo.gdal.GetDriverByName('MEM')
+        export_type = osgeo.gdal_array.NumericTypeCodeToGDALTypeCode(options.gdal_type)
+
+        image_mem = driver.Create('grid', x_res, y_res, eType=export_type)
+
+        if transform is not None:
+            image_mem.SetGeoTransform(transform)
+        if projection is not None:
+            image_mem.SetProjection(projection.ExportToWkt())
+        band = image_mem.GetRasterBand(1)
         if options.empty is not None:
             band.SetNoDataValue(options.empty)
         band.WriteArray(options.data)
         band.FlushCache()
+
+        gtiff_driver = osgeo.gdal.GetDriverByName('GTiff')
+        image = gtiff_driver.Create(options.output_file, x_res, y_res, eType=export_type)
+
+        targetPrj = osr.SpatialReference()
+        targetPrj.ImportFromProj4('+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs')
+        goesTransform = Goes16Converter.geo_transform(self.extents_WGS84, y_res, x_res)
+
+        image.SetProjection(targetPrj.ExportToWkt())
+        image.SetGeoTransform(goesTransform)
+
+        osgeo.gdal.ReprojectImage(image_mem, image, projection.ExportToWkt(), targetPrj.ExportToWkt(), osgeo.gdal.GRA_NearestNeighbour,
+                            options=['NUM_THREADS=ALL_CPUS'])
+
+        band_img = image.GetRasterBand(1)
+        band_img.FlushCache()
+
         return image
 
     def _get_transform(self, options, global_variable_name="spatial_resolution"):
@@ -130,9 +160,6 @@ class Goes16Converter(Converters):
         return projection
 
     def extract(self, options, variable_name="CMI"):
-        tiff_options = GeoTIFF_Options(output_file=options.output_file,
-                                       data=self._extract_netcdf_image(options, variable_name),
-                                       projection=self._extract_projection(options, variable_name),
-                                       extents=self._get_transform(options))
+        tiff_options = GeoTIFF_Options(output_file=options.output_file, data=self._extract_netcdf_image(options, variable_name))
         tiff_data = self._to_geotiff(tiff_options)
         return tiff_data

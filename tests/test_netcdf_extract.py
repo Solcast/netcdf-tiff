@@ -17,4 +17,4 @@ from src.metadata.goes16_filename_metadata import Goes16FileNameMetadata
 )
 def test_goes16_metadata(input_filename, channel):
     file_metadata = Goes16FileNameMetadata.parse(input_filename)
-    assert (int(file_metadata.sensor.channel), channel)
+    assert int(file_metadata.sensor.channel) == channel

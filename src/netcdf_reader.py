@@ -146,6 +146,13 @@ class NetCDFReader:
         projection_dict = self.variable_attributes_dict(attrib_dict[grid_key])
         return projection_dict
 
+    def variable_contents(self, variable_name):
+        if self.variable_exists(variable_name):
+            nc = netCDF4.Dataset(self.netcdf_file, 'r')
+            result = nc.variables[variable_name][:]
+            return result
+        return None
+
     def variable_attributes_dict(self, variable_name) -> dict:
         results = {}
         if not self.variable_exists(variable_name):
